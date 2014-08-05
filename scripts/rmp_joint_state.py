@@ -6,8 +6,7 @@ Battery monitor for the Segway RMP platform.
 Author:  Chris Dunkers, Worcester Polytechnic Institute
 Version: June 23, 2014
 """
-from ros_ethernet_rmp.msg import RMPFeedback
-from battery_monitor_rmp.msg import RMPBatteryStatus 
+from rmp_msgs.msg import RMPFeedback
 from python_ethernet_rmp.system_defines import *
 from std_msgs.msg import String
 from sensor_msgs.msg import JointState
@@ -29,11 +28,13 @@ class JointStateMonitor:
 		"""
 		Get the battery parameters
 		"""
-		self.has_two_wheels = rospy.get_param('~front_base_batt_1',True)
+		self.has_two_wheels = rospy.get_param('~has_two_wheels',True)
 		self.link_left_front = rospy.get_param('~link_left_front','base_link_left_wheel_joint')
 		self.link_right_front = rospy.get_param('~link_right_front','base_link_right_wheel_joint')
-		self.link_left_rear = rospy.get_param('~link_left_rear','base_link_leftr_wheel_joint')
-		self.link_right_rear = rospy.get_param('~link_right_rear','base_link_rightr_wheel_joint')
+		self.link_left_rear = rospy.get_param('~link_left_rear','base_link_left_rear_wheel_joint')
+		self.link_right_rear = rospy.get_param('~link_right_rear','base_link_right_rear_wheel_joint')
+		tire_diameter = rospy.get_param('/ethernet_rmp/my_tire_diameter',DEFAULT_TIRE_DIAMETER_M)
+		self.circumference = math.pi*tire_diameter;
 		
 	def get_batt_state(self, rmp):
 		"""
@@ -55,21 +56,21 @@ class JointStateMonitor:
 		"""
 		for x in range(0, len(rmp_items)):
 			if rmp_items[x] == 'left_front_pos_m':
-				pos[0] = rmp_values[x]
+				pos[0] =  ((rmp_values[x]/self.circumference) % 1.0)*(2*math.pi)
 			elif rmp_items[x] == 'right_front_pos_m':
-				pos[1] = rmp_values[x]
+				pos[1] = -((rmp_values[x]/self.circumference) % 1.0)*(2*math.pi)
 			elif rmp_items[x] == 'left_rear_pos_m':
-				pos[2] = rmp_values[x]
+				pos[2] = ((rmp_values[x]/self.circumference) % 1.0)*(2*math.pi)
 			elif rmp_items[x] == 'right_rear_pos_m':
-				pos[3] = rmp_values[x]
+				pos[3] = -((rmp_values[x]/self.circumference) % 1.0)*(2*math.pi)
 			elif rmp_items[x] == 'left_front_vel_mps':
 				vel[0] = rmp_values[x]
 			elif rmp_items[x] == 'right_front_vel_mps':
-				vel[1] = rmp_values[x]
+				vel[1] = -rmp_values[x]
 			elif rmp_items[x] == 'left_rear_vel_mps':
 				vel[2] = rmp_values[x]
 			elif rmp_items[x] == 'right_rear_vel_mps':
-				vel[3] = rmp_values[x]
+				vel[3] = -rmp_values[x]
 				
 		if self.has_two_wheels:
 			num = 2
